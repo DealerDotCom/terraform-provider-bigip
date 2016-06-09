@@ -24,6 +24,8 @@ resource "bigip_ltm_monitor" "test-monitor" {
 	manual_resume = false
 	ip_dscp = 0
 	time_until_up = 0
+	username = "testuser"
+	password = "testpassword"
 }
 `
 
@@ -50,6 +52,8 @@ func TestBigipLtmMonitor_create(t *testing.T) {
 					resource.TestCheckResourceAttr("bigip_ltm_monitor.test-monitor", "manual_resume", "false"),
 					resource.TestCheckResourceAttr("bigip_ltm_monitor.test-monitor", "ip_dscp", "0"),
 					resource.TestCheckResourceAttr("bigip_ltm_monitor.test-monitor", "time_until_up", "0"),
+					resource.TestCheckResourceAttr("bigip_ltm_monitor.test-monitor", "username", "testuser"),
+					resource.TestCheckResourceAttr("bigip_ltm_monitor.test-monitor", "password", "testpassword"),
 				),
 			},
 		},
@@ -70,7 +74,7 @@ func testCheckMonitorExists(name string) resource.TestCheckFunc {
 				return nil
 			}
 		}
-		return fmt.Errorf("Monitor ", name, " was not created.")
+		return fmt.Errorf("Monitor %s was not created", name)
 	}
 }
 
@@ -90,7 +94,7 @@ func testMonitorsDestroyed(s *terraform.State) error {
 		name := rs.Primary.ID
 		for _, m := range monitors {
 			if m.FullPath == name {
-				return fmt.Errorf("Monitor ", name, " not destroyed.")
+				return fmt.Errorf("Monitor %s not destroyed", name)
 			}
 		}
 	}

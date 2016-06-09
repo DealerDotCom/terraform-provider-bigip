@@ -973,10 +973,10 @@
 			"revisionTime": "2016-05-09T20:31:07Z"
 		},
 		{
-			"checksumSHA1": "t6B+A2E2L4A6v6J0azQhtUAs/8o=",
+			"checksumSHA1": "/PTlR067VtUfvKQBIMbyVgI+J2s=",
 			"path": "github.com/scottdware/go-bigip",
-			"revision": "27e36dce7a6e5d1dd4a54c3f28657ec28429f037",
-			"revisionTime": "2016-06-02T19:19:38Z"
+			"revision": "5d7c613aa5c25a2c4a0caa160a3d0b1e2c0df729",
+			"revisionTime": "2016-06-08T18:07:09Z"
 		},
 		{
 			"checksumSHA1": "Bn333k9lTndxU3D6n/G5c+GMcYY=",
