@@ -100,6 +100,18 @@ func resourceBigipLtmMonitor() *schema.Resource {
 				Default:     0,
 				Description: "Time in seconds",
 			},
+
+			"username": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Username to apply for specific monitors (http/s, mysql, ftp, etc)",
+			},
+
+			"password": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Password to apply for specific monitors (http/s, mysql, ftp, etc)",
+			},
 		},
 	}
 }
@@ -107,17 +119,27 @@ func resourceBigipLtmMonitor() *schema.Resource {
 func resourceBigipLtmMonitorCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*bigip.BigIP)
 	name := d.Get("name").(string)
+	parent := monitorParent(d.Get("parent").(string))
 
-	log.Println("[INFO] Creating monitor " + name + " :: " + monitorParent(d.Get("parent").(string)))
+	log.Println("[INFO] Creating monitor " + name + " :: " + parent)
 
-	client.CreateMonitor(
-		name,
-		monitorParent(d.Get("parent").(string)),
-		d.Get("interval").(int),
-		d.Get("timeout").(int),
-		d.Get("send").(string),
-		d.Get("receive").(string),
-	)
+	monitor := &bigip.Monitor{
+		Name:          name,
+		ParentMonitor: parent,
+		Interval:      d.Get("interval").(int),
+		Timeout:       d.Get("timeout").(int),
+		SendString:    d.Get("send").(string),
+		ReceiveString: d.Get("receive").(string),
+		Username:      d.Get("username").(string),
+		Password:      d.Get("password").(string),
+	}
+
+	log.Println("[DEBUG] Monitor: ", monitor)
+
+	err := client.AddMonitor(monitor)
+	if err != nil {
+		return err
+	}
 
 	d.SetId(name)
 
@@ -148,10 +170,12 @@ func resourceBigipLtmMonitorRead(d *schema.ResourceData, meta interface{}) error
 			d.Set("manual_resume", m.ManualResume)
 			d.Set("parent", m.ParentMonitor)
 			d.Set("name", name)
+			d.Set("username", m.Username)
+			d.Set("password", d.Get("password").(string))
 			return nil
 		}
 	}
-	return fmt.Errorf("Couldn't find monitor ", name)
+	return fmt.Errorf("Couldn't find monitor %s", name)
 }
 
 func resourceBigipLtmMonitorExists(d *schema.ResourceData, meta interface{}) (bool, error) {
@@ -190,6 +214,8 @@ func resourceBigipLtmMonitorUpdate(d *schema.ResourceData, meta interface{}) err
 		IPDSCP:         d.Get("ip_dscp").(int),
 		TimeUntilUp:    d.Get("time_until_up").(int),
 		ManualResume:   d.Get("manual_resume").(bool),
+		Username:       d.Get("username").(string),
+		Password:       d.Get("password").(string),
 	}
 
 	return client.ModifyMonitor(name, monitorParent(d.Get("parent").(string)), m)
