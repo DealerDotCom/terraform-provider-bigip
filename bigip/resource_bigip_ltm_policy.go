@@ -4,10 +4,11 @@ import (
 	"log"
 
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/scottdware/go-bigip"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/scottdware/go-bigip"
 )
 
 var CONTROLS = schema.NewSet(schema.HashString, []interface{}{"caching", "compression", "classification", "forwarding", "request-adaptation", "response-adpatation", "server-ssl"})
@@ -20,6 +21,9 @@ func resourceBigipLtmPolicy() *schema.Resource {
 		Update: resourceBigipLtmPolicyUpdate,
 		Delete: resourceBigipLtmPolicyDelete,
 		Exists: resourceBigipLtmPolicyExists,
+		Importer: &schema.ResourceImporter{
+			State: resourceBigipLtmPolicyImporter,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -1071,6 +1075,7 @@ func resourceBigipLtmPolicyRead(d *schema.ResourceData, meta interface{}) error 
 
 	log.Println("[INFO] Fetching policy " + name)
 	p, err := client.GetPolicy(name)
+
 	if err != nil {
 		return err
 	}
@@ -1174,4 +1179,8 @@ func interfaceToResourceData(obj interface{}, d *schema.ResourceData, prefix str
 			}
 		}
 	}
+}
+
+func resourceBigipLtmPolicyImporter(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	return []*schema.ResourceData{d}, nil
 }
