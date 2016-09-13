@@ -325,11 +325,20 @@ resource "bigip_ltm_policy" "policy" {
 
 # Building
 
-Create the distributable packages like so:
+Clone the Terraform project (>= 0.7), and copy the following files from this project, into that location;
 
+ * /main.go => terraform/builtin/bins/provider-bigip/main.go
+ * /bigip   => terraform/builtin/providers/bigip
+
+After that, run;
 ```
-make && make dist
+make plugin-dev PLUGIN=provider-bigip
 ```
+
+See these pages for more information:
+
+ * https://www.terraform.io/docs/internals/internal-plugins.html
+ * https://github.com/hashicorp/terraform#developing-terraform
 
 # Testing
 
