@@ -308,4 +308,3 @@ func resourceBigipLtmVirtualServerDelete(d *schema.ResourceData, meta interface{
 func resourceBigipLtmVirtualServerImporter(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	return []*schema.ResourceData{d}, nil
 }
-
