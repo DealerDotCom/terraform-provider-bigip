@@ -3,9 +3,10 @@ package bigip
 import (
 	"log"
 
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/scottdware/go-bigip"
-	"strings"
 )
 
 func resourceBigipLtmIRule() *schema.Resource {
@@ -15,6 +16,9 @@ func resourceBigipLtmIRule() *schema.Resource {
 		Update: resourceBigipLtmIRuleUpdate,
 		Delete: resourceBigipLtmIRuleDelete,
 		Exists: resourceBigipLtmIRuleExists,
+		Importer: &schema.ResourceImporter{
+			State: resourceBigipLtmIRuleImporter,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -60,7 +64,7 @@ func resourceBigipLtmIRuleRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	d.Set("irule", irule.Rule)
-
+	d.Set("name", name)
 	return nil
 }
 
@@ -95,4 +99,8 @@ func resourceBigipLtmIRuleDelete(d *schema.ResourceData, meta interface{}) error
 	client := meta.(*bigip.BigIP)
 	name := d.Id()
 	return client.DeleteIRule(name)
+}
+
+func resourceBigipLtmIRuleImporter(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	return []*schema.ResourceData{d}, nil
 }
