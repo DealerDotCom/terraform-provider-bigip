@@ -96,6 +96,13 @@ func resourceBigipLtmVirtualServer() *schema.Resource {
 				Description: "none, automap, snat",
 			},
 
+			"snatpool": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Name of the snatpool to use. Requires source_address_translation to be set to 'snat'.",
+			},
+
 			"ip_protocol": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -172,6 +179,7 @@ func resourceBigipLtmVirtualServerRead(d *schema.ResourceData, meta interface{})
 	d.Set("irules", makeStringSet(&vs.Rules))
 	d.Set("ip_protocol", vs.IPProtocol)
 	d.Set("source_address_translation", vs.SourceAddressTranslation.Type)
+	d.Set("snatpool", vs.SourceAddressTranslation.Pool)
 	d.Set("policies", vs.Policies)
 
 	profiles, err := client.VirtualServerProfiles(name)
@@ -269,8 +277,12 @@ func resourceBigipLtmVirtualServerUpdate(d *schema.ResourceData, meta interface{
 		Policies:    policies,
 		IPProtocol:  d.Get("ip_protocol").(string),
 		SourceAddressTranslation: struct {
+			Pool string `json:"pool,omitempty"`
 			Type string `json:"type,omitempty"`
-		}{Type: d.Get("source_address_translation").(string)},
+		}{
+			Pool: d.Get("snatpool").(string),
+			Type: d.Get("source_address_translation").(string),
+		},
 	}
 
 	err := client.ModifyVirtualServer(name, vs)
