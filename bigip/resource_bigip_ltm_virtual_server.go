@@ -277,11 +277,11 @@ func resourceBigipLtmVirtualServerUpdate(d *schema.ResourceData, meta interface{
 		Policies:    policies,
 		IPProtocol:  d.Get("ip_protocol").(string),
 		SourceAddressTranslation: struct {
-			Pool string `json:"pool,omitempty"`
 			Type string `json:"type,omitempty"`
+			Pool string `json:"pool,omitempty"`
 		}{
-			Pool: d.Get("snatpool").(string),
 			Type: d.Get("source_address_translation").(string),
+			Pool: d.Get("snatpool").(string),
 		},
 	}
 
