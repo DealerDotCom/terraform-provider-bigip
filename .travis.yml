@@ -1,16 +1,19 @@
 language: go
 
 go:
-  - 1.6
+  - 1.7.3
 
 before_install:
   - go get github.com/mitchellh/gox
 
-install: make get-deps
+install:
+  - make get-deps
 
-script: make bin
+script:
+  - make plugin-dev PLUGIN="provider-bigip"
 
-after_success: make dist
+after_success:
+  - make dist
 
 deploy:
   provider: releases
