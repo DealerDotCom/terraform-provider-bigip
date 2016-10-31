@@ -5,6 +5,7 @@ go:
   - 1.7.3
 
 before_install:
+  - go get github.com/scottdware/go-bigip
   - go get github.com/mitchellh/gox
   - go get github.com/hashicorp/terraform
 
