@@ -15,6 +15,7 @@ install:
   - mkdir $BIGIP_BIN_PATH
   - mkdir $TF_DIR/builtin/providers/bigip
   - cp $TRAVIS_BUILD_DIR/main.go $BIGIP_BIN_PATH/main.go
+  - sed -i'' "s!github.com/DealerDotCom/terraform-provider-bigip!github.com/hashicorp/terraform/builtin/providers!" "$BIGIP_BIN_PATH/main.go"
   - cp -r $TRAVIS_BUILD_DIR/bigip $TF_DIR/builtin/providers
   - cd $TF_DIR
 

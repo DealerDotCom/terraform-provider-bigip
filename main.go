@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform/builtin/providers/bigip"
+	"github.com/DealerDotCom/terraform-provider-bigip/bigip"
 	"github.com/hashicorp/terraform/plugin"
 )
 
