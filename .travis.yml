@@ -5,27 +5,17 @@ go:
   - 1.7.3
 
 before_install:
-  - go get github.com/scottdware/go-bigip
-  - go get github.com/mitchellh/gox
   - go get github.com/hashicorp/terraform
+  - go get github.com/mitchellh/gox
+  - go get github.com/scottdware/go-bigip
 
 install:
   - make get-deps
-  - TF_DIR=$GOPATH/src/github.com/hashicorp/terraform
-  - BIGIP_BIN_PATH=$TF_DIR/builtin/bins/provider-bigip
-  - mkdir $BIGIP_BIN_PATH
-  - mkdir $TF_DIR/builtin/providers/bigip
-  - cp $TRAVIS_BUILD_DIR/main.go $BIGIP_BIN_PATH/main.go
-  - sed -i'' "s!github.com/DealerDotCom/terraform-provider-bigip!github.com/hashicorp/terraform/builtin/providers!" "$BIGIP_BIN_PATH/main.go"
-  - cp -r $TRAVIS_BUILD_DIR/bigip $TF_DIR/builtin/providers
-  - cd $TF_DIR
 
 script:
-  - make plugin-dev PLUGIN="provider-bigip"
+  - make bin
 
 after_success:
-  - cp -r $TF_DIR/target $TRAVIS_BUILD_DIR
-  - cd $TRAVIS_BUILD_DIR
   - make dist
 
 deploy:
