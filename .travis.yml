@@ -10,17 +10,19 @@ before_install:
 
 install:
   - make get-deps
-  - mkdir $GOPATH/src/github.com/hashicorp/terraform/builtin/bins/provider-bigip
-  - mkdir $GOPATH/src/github.com/hashicorp/terraform/builtin/providers/bigip
-  - cp $TRAVIS_BUILD_DIR/main.go $GOPATH/src/github.com/hashicorp/terraform/builtin/bins/provider-bigip/main.go
-  - cp -r $TRAVIS_BUILD_DIR/bigip $GOPATH/src/github.com/hashicorp/terraform/builtin/providers
-  - cd $GOPATH/src/github.com/hashicorp/terraform
+  - TF_DIR=$GOPATH/src/github.com/hashicorp/terraform
+  - BIGIP_BIN_PATH=$TF_DIR/builtin/bins/provider-bigip
+  - mkdir $BIGIP_BIN_PATH
+  - mkdir $TF_DIR/builtin/providers/bigip
+  - cp $TRAVIS_BUILD_DIR/main.go $BIGIP_BIN_PATH/main.go
+  - cp -r $TRAVIS_BUILD_DIR/bigip $TF_DIR/builtin/providers
+  - cd $TF_DIR
 
 script:
   - make plugin-dev PLUGIN="provider-bigip"
 
 after_success:
-  - cp -r $GOPATH/src/github.com/hashicorp/terraform/target $TRAVIS_BUILD_DIR
+  - cp -r $TF_DIR/target $TRAVIS_BUILD_DIR
   - cd $TRAVIS_BUILD_DIR
   - make dist
 
