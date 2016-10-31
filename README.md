@@ -13,7 +13,7 @@ This provider uses the iControlREST API. Make sure that is installed and enabled
 
  - Download the latest [release](https://github.com/DealerDotCom/terraform-provider-bigip/releases) for your platform.
  - Rename the executable to `terraform-provider-bigip`
- - Copy somewhere on your path or update `.terraformrc` in your home directory like so:
+ - Copy somewhere on your path, or update `.terraformrc` in your home directory like so:
 ```
 providers {
 	bigip = "/path/to/terraform-provider-bigip"
@@ -325,14 +325,10 @@ resource "bigip_ltm_policy" "policy" {
 
 # Building
 
-Clone the Terraform project (>= 0.7), and copy the following files from this project, into that location;
+Create the distributable packages like so:
 
- * /main.go => terraform/builtin/bins/provider-bigip/main.go
- * /bigip   => terraform/builtin/providers/bigip
-
-After that, run;
 ```
-make plugin-dev PLUGIN=provider-bigip
+make get-deps && make bin && make dist
 ```
 
 See these pages for more information:
