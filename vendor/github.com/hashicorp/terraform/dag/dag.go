@@ -206,11 +206,11 @@ func (g *AcyclicGraph) Walk(cb WalkFunc) error {
 					case <-ch:
 						break DepSatisfied
 					case <-time.After(time.Second * 5):
-						log.Printf("[DEBUG] vertex %s, waiting for: %s",
+						log.Printf("[DEBUG] vertex %q, waiting for: %q",
 							VertexName(v), VertexName(deps[i]))
 					}
 				}
-				log.Printf("[DEBUG] vertex %s, got dep: %s",
+				log.Printf("[DEBUG] vertex %q, got dep: %q",
 					VertexName(v), VertexName(deps[i]))
 			}
 
@@ -332,12 +332,7 @@ func (g *AcyclicGraph) ReverseDepthFirstWalk(start []Vertex, f DepthWalkFunc) er
 		}
 		seen[current.Vertex] = struct{}{}
 
-		// Visit the current node
-		if err := f(current.Vertex, current.Depth); err != nil {
-			return err
-		}
-
-		// Visit targets of this in a consistent order.
+		// Add next set of targets in a consistent order.
 		targets := AsVertexList(g.UpEdges(current.Vertex))
 		sort.Sort(byVertexName(targets))
 		for _, t := range targets {
@@ -345,6 +340,11 @@ func (g *AcyclicGraph) ReverseDepthFirstWalk(start []Vertex, f DepthWalkFunc) er
 				Vertex: t,
 				Depth:  current.Depth + 1,
 			})
+		}
+
+		// Visit the current node
+		if err := f(current.Vertex, current.Depth); err != nil {
+			return err
 		}
 	}
 

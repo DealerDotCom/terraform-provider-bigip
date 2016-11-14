@@ -76,7 +76,7 @@ func (r *DiffFieldReader) readMap(
 		if !strings.HasPrefix(k, prefix) {
 			continue
 		}
-		if strings.HasPrefix(k, prefix+"#") {
+		if strings.HasPrefix(k, prefix+"%") {
 			// Ignore the count field
 			continue
 		}
@@ -183,6 +183,16 @@ func (r *DiffFieldReader) readSet(
 		// "0" to "" breaking us (if that were to happen).
 		if _, ok := r.Diff.Attributes[prefix+"#"]; ok {
 			exists = true
+		}
+	}
+
+	if !exists {
+		result, err := r.Source.ReadField(address)
+		if err != nil {
+			return FieldReadResult{}, err
+		}
+		if result.Exists {
+			return result, nil
 		}
 	}
 

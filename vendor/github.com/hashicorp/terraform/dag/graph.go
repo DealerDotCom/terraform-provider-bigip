@@ -48,6 +48,32 @@ func (g *Graph) Edges() []Edge {
 	return result
 }
 
+// EdgesFrom returns the list of edges from the given source.
+func (g *Graph) EdgesFrom(v Vertex) []Edge {
+	var result []Edge
+	from := hashcode(v)
+	for _, e := range g.Edges() {
+		if hashcode(e.Source()) == from {
+			result = append(result, e)
+		}
+	}
+
+	return result
+}
+
+// EdgesTo returns the list of edges to the given target.
+func (g *Graph) EdgesTo(v Vertex) []Edge {
+	var result []Edge
+	search := hashcode(v)
+	for _, e := range g.Edges() {
+		if hashcode(e.Target()) == search {
+			result = append(result, e)
+		}
+	}
+
+	return result
+}
+
 // HasVertex checks if the given Vertex is present in the graph.
 func (g *Graph) HasVertex(v Vertex) bool {
 	return g.vertices.Include(v)
@@ -202,16 +228,17 @@ func (g *Graph) StringWithNodeTypes() string {
 
 		// Alphabetize dependencies
 		deps := make([]string, 0, targets.Len())
-		targetNodes := make([]Vertex, 0, targets.Len())
+		targetNodes := make(map[string]Vertex)
 		for _, target := range targets.List() {
-			deps = append(deps, VertexName(target))
-			targetNodes = append(targetNodes, target)
+			dep := VertexName(target)
+			deps = append(deps, dep)
+			targetNodes[dep] = target
 		}
 		sort.Strings(deps)
 
 		// Write dependencies
-		for i, d := range deps {
-			buf.WriteString(fmt.Sprintf("  %s - %T\n", d, targetNodes[i]))
+		for _, d := range deps {
+			buf.WriteString(fmt.Sprintf("  %s - %T\n", d, targetNodes[d]))
 		}
 	}
 

@@ -1,10 +1,13 @@
 package schema
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform/terraform"
 )
 
@@ -33,6 +36,14 @@ type Provider struct {
 	// Diff, etc. to the proper resource.
 	ResourcesMap map[string]*Resource
 
+	// DataSourcesMap is the collection of available data sources that
+	// this provider implements, with a Resource instance defining
+	// the schema and Read operation of each.
+	//
+	// Resource instances for data sources must have a Read function
+	// and must *not* implement Create, Update or Delete.
+	DataSourcesMap map[string]*Resource
+
 	// ConfigureFunc is a function for configuring the provider. If the
 	// provider doesn't need to be configured, this can be omitted.
 	//
@@ -40,6 +51,10 @@ type Provider struct {
 	ConfigureFunc ConfigureFunc
 
 	meta interface{}
+
+	stopCtx       context.Context
+	stopCtxCancel context.CancelFunc
+	stopOnce      sync.Once
 }
 
 // ConfigureFunc is the function used to configure a Provider.
@@ -61,18 +76,25 @@ func (p *Provider) InternalValidate() error {
 		return errors.New("provider is nil")
 	}
 
+	var validationErrors error
 	sm := schemaMap(p.Schema)
 	if err := sm.InternalValidate(sm); err != nil {
-		return err
+		validationErrors = multierror.Append(validationErrors, err)
 	}
 
 	for k, r := range p.ResourcesMap {
-		if err := r.InternalValidate(nil); err != nil {
-			return fmt.Errorf("%s: %s", k, err)
+		if err := r.InternalValidate(nil, true); err != nil {
+			validationErrors = multierror.Append(validationErrors, fmt.Errorf("resource %s: %s", k, err))
 		}
 	}
 
-	return nil
+	for k, r := range p.DataSourcesMap {
+		if err := r.InternalValidate(nil, false); err != nil {
+			validationErrors = multierror.Append(validationErrors, fmt.Errorf("data source %s: %s", k, err))
+		}
+	}
+
+	return validationErrors
 }
 
 // Meta returns the metadata associated with this provider that was
@@ -86,6 +108,34 @@ func (p *Provider) Meta() interface{} {
 // set here.
 func (p *Provider) SetMeta(v interface{}) {
 	p.meta = v
+}
+
+// Stopped reports whether the provider has been stopped or not.
+func (p *Provider) Stopped() bool {
+	ctx := p.StopContext()
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+// StopCh returns a channel that is closed once the provider is stopped.
+func (p *Provider) StopContext() context.Context {
+	p.stopOnce.Do(p.stopInit)
+	return p.stopCtx
+}
+
+func (p *Provider) stopInit() {
+	p.stopCtx, p.stopCtxCancel = context.WithCancel(context.Background())
+}
+
+// Stop implementation of terraform.ResourceProvider interface.
+func (p *Provider) Stop() error {
+	p.stopOnce.Do(p.stopInit)
+	p.stopCtxCancel()
+	return nil
 }
 
 // Input implementation of terraform.ResourceProvider interface.
@@ -197,7 +247,121 @@ func (p *Provider) Resources() []terraform.ResourceType {
 
 	result := make([]terraform.ResourceType, 0, len(keys))
 	for _, k := range keys {
+		resource := p.ResourcesMap[k]
+
+		// This isn't really possible (it'd fail InternalValidate), but
+		// we do it anyways to avoid a panic.
+		if resource == nil {
+			resource = &Resource{}
+		}
+
 		result = append(result, terraform.ResourceType{
+			Name:       k,
+			Importable: resource.Importer != nil,
+		})
+	}
+
+	return result
+}
+
+func (p *Provider) ImportState(
+	info *terraform.InstanceInfo,
+	id string) ([]*terraform.InstanceState, error) {
+	// Find the resource
+	r, ok := p.ResourcesMap[info.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown resource type: %s", info.Type)
+	}
+
+	// If it doesn't support import, error
+	if r.Importer == nil {
+		return nil, fmt.Errorf("resource %s doesn't support import", info.Type)
+	}
+
+	// Create the data
+	data := r.Data(nil)
+	data.SetId(id)
+	data.SetType(info.Type)
+
+	// Call the import function
+	results := []*ResourceData{data}
+	if r.Importer.State != nil {
+		var err error
+		results, err = r.Importer.State(data, p.meta)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Convert the results to InstanceState values and return it
+	states := make([]*terraform.InstanceState, len(results))
+	for i, r := range results {
+		states[i] = r.State()
+	}
+
+	// Verify that all are non-nil. If there are any nil the error
+	// isn't obvious so we circumvent that with a friendlier error.
+	for _, s := range states {
+		if s == nil {
+			return nil, fmt.Errorf(
+				"nil entry in ImportState results. This is always a bug with\n" +
+					"the resource that is being imported. Please report this as\n" +
+					"a bug to Terraform.")
+		}
+	}
+
+	return states, nil
+}
+
+// ValidateDataSource implementation of terraform.ResourceProvider interface.
+func (p *Provider) ValidateDataSource(
+	t string, c *terraform.ResourceConfig) ([]string, []error) {
+	r, ok := p.DataSourcesMap[t]
+	if !ok {
+		return nil, []error{fmt.Errorf(
+			"Provider doesn't support data source: %s", t)}
+	}
+
+	return r.Validate(c)
+}
+
+// ReadDataDiff implementation of terraform.ResourceProvider interface.
+func (p *Provider) ReadDataDiff(
+	info *terraform.InstanceInfo,
+	c *terraform.ResourceConfig) (*terraform.InstanceDiff, error) {
+
+	r, ok := p.DataSourcesMap[info.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown data source: %s", info.Type)
+	}
+
+	return r.Diff(nil, c)
+}
+
+// RefreshData implementation of terraform.ResourceProvider interface.
+func (p *Provider) ReadDataApply(
+	info *terraform.InstanceInfo,
+	d *terraform.InstanceDiff) (*terraform.InstanceState, error) {
+
+	r, ok := p.DataSourcesMap[info.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown data source: %s", info.Type)
+	}
+
+	return r.ReadDataApply(d, p.meta)
+}
+
+// DataSources implementation of terraform.ResourceProvider interface.
+func (p *Provider) DataSources() []terraform.DataSource {
+	keys := make([]string, 0, len(p.DataSourcesMap))
+	for k, _ := range p.DataSourcesMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	result := make([]terraform.DataSource, 0, len(keys))
+	for _, k := range keys {
+		result = append(result, terraform.DataSource{
 			Name: k,
 		})
 	}
