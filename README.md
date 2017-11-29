@@ -1,3 +1,7 @@
+```
+NOTICE: Somewhat unmaintained. Please use https://github.com/f5devcentral/terraform-provider-bigip
+```
+
 # Overview
 
 A [Terraform](terraform.io) provider for F5 BigIP. Resources are currently available for LTM.
